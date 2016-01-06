@@ -1,8 +1,23 @@
+##
+# EditorConfig Settings
+#
+# Defines and maintains consistent coding styles
+# between different editors and IDEs
+#
+# @link editorconfig.org
+##
+
+# Top-most EditorConfig file
 root = true
 
 [*]
 charset = utf-8
-indent_style = tab
+indent_style = space
+indent_size = 2
+# Unix-style newlines with a newline ending every file
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+[Makefile]
+indent_style = tab

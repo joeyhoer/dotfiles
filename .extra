@@ -1,0 +1,31 @@
+# Enable rbenv shims and autocompletion
+hash rbenv 2>/dev/null && eval "$(rbenv init -)"
+
+# Enable pyenv shims and autocompletion
+hash pyenv 2>/dev/null && eval "$(pyenv init -)"
+
+# Link `z` to shell
+[ -f `brew --prefix`/etc/profile.d/z.sh ] && . `brew --prefix`/etc/profile.d/z.sh
+
+# Welcome message for login shells
+if [[ $SHLVL -eq 1 ]] || \
+  ( [[ -n "$TMUX" ]] && [[ $SHLVL -eq 3 ]] ); then
+  print -P "%F{008}%B
+              ▝▌
+  ▝▜ ▀▜ ▛▜ ▜ ▜ ▛▀▌ ▀▜ ▛▜ ▛▜
+  ▙▟ ▙▟ ▙▄ ▐▄▟ ▙ ▙ ▙▟ ▙▄ ▙▖
+             ▐▖
+%b"
+fi
+
+# Key Bindings
+autoload -U up-line-or-beginning-search
+autoload -U down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+if [[ "${terminfo[kcuu1]}" != "" ]]; then
+  bindkey "${terminfo[kcuu1]}" up-line-or-beginning-search      # start typing + [Up-Arrow] - fuzzy find history forward
+fi
+if [[ "${terminfo[kcud1]}" != "" ]]; then
+  bindkey "${terminfo[kcud1]}" down-line-or-beginning-search    # start typing + [Down-Arrow] - fuzzy find history backward
+fi

@@ -1,0 +1,9 @@
+# Add Homebrew directories to the `$PATH`
+export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
+
+# Add PHP (Homebrew version) to the `$PATH`
+export PATH="$(brew --prefix php56)/bin:$PATH"
+
+# Add `~/bin` to the `$PATH`
+export PATH="$HOME/bin:$PATH"
+# export MANPATH="/usr/local/man:$MANPATH"

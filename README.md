@@ -1,6 +1,6 @@
-# Mathias’s dotfiles
+# Joey Hoer’s dotfiles
 
-![Screenshot of my shell prompt](http://i.imgur.com/EkEtphC.png)
+![Screenshot of Joey Hoer's shell prompt](http://i.imgur.com/EkEtphC.png)
 
 ## Installation
 

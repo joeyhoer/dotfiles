@@ -1,25 +1,20 @@
-# Easier navigation: .., ..., ...., ....., ~ and -
-alias ..="cd .."
-alias ...="cd ../.."
-alias ....="cd ../../.."
-alias .....="cd ../../../.."
-alias ~="cd ~" # `cd` is probably faster to type though
-alias -- -="cd -"
-
 # Shortcuts
-alias d="cd ~/Documents/Dropbox"
-alias dl="cd ~/Downloads"
-alias dt="cd ~/Desktop"
-alias p="cd ~/projects"
+alias db="cd ~/Dropbox/"
+alias dl="cd ~/Downloads/"
+alias doc="cd ~/Documents/"
+alias dt="cd ~/Desktop/"
+alias pr="cd ~/Projects/"
+alias st="cd ~/Sites/"
+alias ic="cd ~/Library/Mobile\ Documents/com~apple~CloudDocs/"
 alias g="git"
 alias h="history"
 alias j="jobs"
 
 # Detect which `ls` flavor is in use
 if ls --color > /dev/null 2>&1; then # GNU `ls`
-	colorflag="--color"
+  colorflag="--color"
 else # OS X `ls`
-	colorflag="-G"
+  colorflag="-G"
 fi
 
 # List all files colorized in long format
@@ -48,15 +43,29 @@ alias sudo='sudo '
 # Get week number
 alias week='date +%V'
 
+# Get date in ISO 8601 format
+alias ymd='date +%Y%m%d'
+
 # Stopwatch
 alias timer='echo "Timer started. Stop with Ctrl-D." && date && time cat && date'
 
-# Get OS X Software Updates, and update installed Ruby gems, Homebrew, npm, and their installed packages
-alias update='sudo softwareupdate -i -a; brew update; brew upgrade --all; brew cleanup; npm install npm -g; npm update -g; sudo gem update --system; sudo gem update'
+# Get OS X Software Updates, and update Homebrew, npm, Ruby gems, pip and their installed packages
+alias update='
+  sudo softwareupdate -i -a;
+  brew update; brew upgrade --all; brew cleanup; brew prune;
+  npm update npm -g; npm update -g;
+  sudo gem update --system; sudo gem update
+  po=$(pip list --outdated); [[ "$po" != '' ]] && pip install --upgrade $(echo "$po" | awk '\''{print $1}'\'')'
+
+# Gzip-enabled `curl`
+alias gurl='curl --compressed'
+
+# Get HTTP header
+alias header='curl -sIL'
 
 # IP addresses
 alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
-alias localip="ipconfig getifaddr en0"
+alias localip="ipconfig getifaddr $(networksetup -listallhardwareports | awk -F': ' '$2 ~ /Wi-Fi/ {getline; print $2}')"
 alias ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[0-9]\+\)\|[a-fA-F0-9:]\+\)' | awk '{ sub(/inet6? (addr:)? ?/, \"\"); print }'"
 
 # Flush Directory Service cache
@@ -77,17 +86,19 @@ command -v md5sum > /dev/null || alias md5sum="md5"
 
 # OS X has no `sha1sum`, so use `shasum` as a fallback
 command -v sha1sum > /dev/null || alias sha1sum="shasum"
+command -v sha256sum > /dev/null || alias sha256sum="shasum -a 256"
 
-# JavaScriptCore REPL
-jscbin="/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Resources/jsc";
-[ -e "${jscbin}" ] && alias jsc="${jscbin}";
-unset jscbin;
+# tac (`cat` backwards) replacement
+alias tac='tail -r'
 
 # Trim new lines and copy to clipboard
 alias c="tr -d '\n' | pbcopy"
 
 # Recursively delete `.DS_Store` files
 alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
+
+# ROT13-encode text. Works for decoding, too!
+alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 
 # Empty the Trash on all mounted volumes and the main HDD.
 # Also, clear Apple’s System Logs to improve shell startup speed.
@@ -128,15 +139,15 @@ alias map="xargs -n1"
 
 # One of @janmoesen’s ProTip™s
 for method in GET HEAD POST PUT DELETE TRACE OPTIONS; do
-	alias "$method"="lwp-request -m '$method'"
+  alias "$method"="lwp-request -m '$method'"
 done
 
 # Make Grunt print stack traces by default
 command -v grunt > /dev/null && alias grunt="grunt --stack"
 
-# Stuff I never really use but cannot delete either because of http://xkcd.com/530/
-alias stfu="osascript -e 'set volume output muted true'"
-alias pumpitup="osascript -e 'set volume 7'"
+# Volume control
+alias mute="osascript -e 'set volume output muted true'"
+alias overdrive="osascript -e 'set volume 7'"
 
 # Kill all the tabs in Chrome to free up memory
 # [C] explained: http://www.commandlinefu.com/commands/view/402/exclude-grep-from-your-grepped-output-of-ps-alias-included-in-description
@@ -147,3 +158,6 @@ alias afk="/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resource
 
 # Reload the shell (i.e. invoke as a login shell)
 alias reload="exec $SHELL -l"
+
+# Restart AirPort
+alias reap="networksetup -setairportpower airport off &>/dev/null; networksetup -setairportpower airport on &>/dev/null"
