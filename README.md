@@ -1,6 +1,6 @@
 # Joey Hoer’s dotfiles
 
-![Screenshot of Joey Hoer's shell prompt](http://jyhr.co/img/shell.png)
+![Screenshot of Joey Hoer's shell prompt](https://i.jyhr.co/shell.png)
 
 ## Installation
 
