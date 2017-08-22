@@ -1,3 +1,10 @@
+# Directory assitance
+# Sites directory
+function st {
+  WEBROOT="$HOME/Sites/"
+  cd "$WEBROOT$1"
+}
+
 # Simple calculator
 function calc {
   local result=""
@@ -118,8 +125,9 @@ function phpserver {
 
 # Compare original and gzipped file size
 function gz {
-  local origsize="$(wc -c < "$1")"
-  local gzipsize="$(gzip -c "$1" | wc -c)"
+  in=$(cat "${1:-/dev/stdin}")
+  local gzipsize="$(echo -n "$in" | gzip - -fc | wc -c)"
+  local origsize="$(echo -n "$in" | wc -c)"
   local ratio="$(echo "$gzipsize * 100/ $origsize" | bc -l)"
   printf "orig: %d bytes\n" "$origsize"
   printf "gzip: %d bytes (%2.2f%%)\n" "$gzipsize" "$ratio"
@@ -266,6 +274,16 @@ function s {
   fi
 }
 
+# `a` with no arguments opens the current directory in Atom, otherwise
+# opens the given location
+function a {
+  if [ $# -eq 0 ]; then
+    atom .
+  else
+    atom "$@"
+  fi
+}
+
 # `v` with no arguments opens the current directory in Vim, otherwise opens the
 # given location
 function v {
@@ -309,7 +327,7 @@ function tre {
 # Check isup.me for website status
 function isup {
   for theSite; do
-    if [[ $(curl -s http://www.isup.me/$1 | grep "It's just you") ]]; then
+    if [[ $(curl -sL http://www.isup.me/$1 | grep "It's just you") ]]; then
       echo "$theSite up";
     else
       echo "$theSite down";
@@ -321,40 +339,6 @@ function isup {
 function debase64 {
   echo "$1" | base64 -D ; echo
 }
-
-# Copy SSH key to pasteboard
-function ssh-config {
-  open -t ~/.ssh/config
-}
-
-# Get resolved SSH hostname
-function ssh-hostname {
-  ssh -G "$1" | awk '$1 ~ /^hostname/ {print $2}'
-}
-
-# Add SSH key to server
-function ssh-copy-id {
-  cat $(ssh-add -l | awk '{print $3 ".pub"}') | ssh "$1" 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys'
-}
-
-# Copy SSH key to pasteboard
-function ssh-keycopy {
-  cat $(ssh-add -l | awk '{print $3 ".pub"}') | pbcopy
-}
-
-# Test SSH public key authentication
-function ssh-keytest {
-  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-      -o PreferredAuthentications=publickey -q "$1" exit && \
-      echo 'Connected' || \
-      echo 'Failed'
-}
-
-# Force SSH to use password authentication
-function ssh-password {
-  ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no "$1"
-}
-
 
 # Encode URI
 function encodeuri {
@@ -370,14 +354,6 @@ function forecast {
   summary=$(echo "$json" | jsawk 'return this.minutely.summary' 2> /dev/null)
   temp=$(echo "$json" | jsawk 'return this.currently.apparentTemperature' 2> /dev/null)
   printf 'Feels like %0.0f\xC2\xB0F. %s\n' "$temp" "$summary"
-}
-
-# Get first frame of video
-function poster {
-  # Frame to grab (in seconds) - Default: 0
-  frame=${2:-0}
-  out=${3:-"$1.jpg"}
-  ffmpeg -loglevel panic -i "$1" -vframes 1 -ss $frame -f image2 "$out"
 }
 
 # Toggle single application mode
@@ -397,7 +373,7 @@ function frame {
   shift 1
   for file in "$@"; do
     color="$(identify -format "%[pixel: u.p{0,0}]" "$file")"
-    mogrify -mattecolor "${color}" -trim -frame "$size" "$file"
+    mogrify -mattecolor "${color}" -trim +repage -frame "$size" "$file"
   done;
 }
 
@@ -434,18 +410,113 @@ function gdns {
     column -t | sort
 }
 
-# New screen recording
-# For the second half of script to work (automated start),
-# assitive access must be enabled
+##
+# Control Notification Center's Do Not Disturb setting
+#
+# $1 ["on"]
+#  "status" Do Not Disturb status
+#  "on"     Enable Do Not Disturb
+#  "off"    Disable Do Not Disturb
+##
+# function dnd {
+#   opt=${1:-on}
+#   osascript <<EOD
+#     set opt to "$opt"
+#     tell application "System Events" to tell application process "SystemUIServer"
+#       try
+#         set dnd_status to (exists menu bar item "Notification Center, Do Not Disturb enabled" of menu bar 1)
+#         if opt is "status" then
+#           set output to dnd_status
+#         else if {"on", "off"} contains opt then
+#           key down option
+#           if   (opt is "off" and dnd_status is true ) ¬
+#             or (opt is "on"  and dnd_status is false) then
+#             # name of menu bar item 1 of menu bar 1 starts with "Notification Center"
+#             click (the first menu bar item of menu bar 1 whose name starts with "Notification Center")
+#           end if
+#           key up option
+#         end if
+#       on error
+#         key up option
+#       end try
+#     end tell
+# EOD
+# }
+
+##
+# New QuickTime screen recording
+# Note: Assistive access must be enabled for "automated start" to work
+##
 function rec {
-  osascript -e 'tell application "QuickTime Player" to activate new screen recording' \
-            -e "tell application \"System Events\" to tell process \"QuickTime Player\" \
-                to tell window \"Screen Recording\" to click button 1"
+  # Enable Do Not Distrub before recording
+  dnd on
+
+  # Activate new screen recording
+  osascript <<'ASCRIPT' >/dev/null
+    tell application "QuickTime Player"
+      activate new screen recording
+      -- Hit Spacebar
+      tell application "System Events" to key code 49
+      -- Alternative
+      -- to tell window "Screen Recording" to click button 1
+    end tell
+ASCRIPT
+
+  # Click-drag to match bounds of application window
+  process="$1"
+  if [ -n "$process" ]; then
+    read x y dx dy <<<$(osascript <<ASCRIPT
+      -- Bring target application to front
+      tell application "${process}" to activate
+      -- Bring QuickTime to front
+      tell application "QuickTime Player" to activate
+      -- Get window bounds
+      set AppleScript's text item delimiters to " "
+      tell application "System Events" to tell process "${process}"
+        set window_bounds to {position, size} of first window
+        get window_bounds as text
+      end tell
+ASCRIPT
+    )
+
+    offset="$2"
+    clickdrag -x   $((x-offset)) -y   $((y-offset)) \
+              -dx $((dx+2*offset)) -dy $((dy+2*offset))
+  fi
+}
+
+# Set macOS wallpaper
+# Examples:
+#   wallpaper set "/Library/Desktop Pictures/Solid Colors/Solid White.png"
+#   wallpaper set "#fff"
+#   wallpaper save
+#   wallpaper restore
+wallpaper() {
+  opt="$1"
+
+  if [[ $opt == "set" ]]; then
+    # Set
+    wallpaper="$2"
+    # TODO: Accept hax value as args, and create image if it does not exist
+    if [[ ${wallpaper//\#} =~ ^([[:xdigit:]]{3}){1,2}$ ]]; then
+      wallpaper="/Library/Desktop Pictures/Solid Colors/${wallpaper//\#}.png"
+    fi
+    osascript -e 'tell application "Finder" to set desktop picture to POSIX file "'$wallpaper'"'
+  elif [[ $opt == "save" ]]; then
+    # Save
+    defaults write com.apple.desktop BackgroundImage -string \
+      "$(osascript -e 'tell application "Finder" to get POSIX path of (desktop picture as alias)')"
+  elif [[ $opt == "restore" ]]; then
+    # Restore
+    wallpaper=$(defaults read com.apple.desktop BackgroundImage)
+    osascript -e 'tell application "Finder" to set desktop picture to POSIX file "'$wallpaper'"'
+  fi
 }
 
 # Lookup IP of hostname
-function ipof {
-  [ -n "$*" ] && dig +short "$1" || return 1
+function ip {
+  [ -n "$*" ] && dig +short "$1" | tail -1 \
+              || dig +short myip.opendns.com @resolver1.opendns.com
 }
 
 # Reload ZSH configurations
@@ -477,4 +548,60 @@ function md2csv {
       -e 's/[[:space:]|]*$//g' \
       -e '/^[[:space:]|:-]*$/d' \
       -e 's/[[:space:]]*\|[[:space:]]*/,/g' "$in" > "$out"
+}
+
+# Print bundle identifier of application
+function bundleid {
+  # Accept multiple forms of input
+  osascript -e "id of app \"$*\"" 2>/dev/null || /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$1/Contents/Info.plist"
+}
+
+# Get compressed webpage sizes
+function httpgz {
+  none=$(curl -sL "$1" | wc -c)
+  gzip=$(curl -sLH "Accept-Encoding: gzip" "$1" | wc -c)
+  br=$(curl -sLH "Accept-Encoding: br" "$1" | wc -c)
+
+  cat <<- EOF
+  none: $none
+  gzip: $gzip $((100*$gzip/$none))%
+  br:   $br $((100*$br/$none))%
+EOF
+}
+
+################################################################################
+# SSH
+################################################################################
+
+# Copy SSH key to pasteboard
+function ssh-config {
+  open -t ~/.ssh/config
+}
+
+# Get resolved SSH hostname
+function ssh-hostname {
+  ssh -G "$1" | awk '$1 ~ /^hostname/ {print $2}'
+}
+
+# Add SSH key to server
+function ssh-copy-id {
+  ssh-add -l && (cat $(ssh-add -l | awk '{print $3 ".pub"}') | ssh "$1" 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys')
+}
+
+# Copy SSH key to pasteboard
+function ssh-keycopy {
+  ssh-add -l && (cat $(ssh-add -l | awk '{print $3 ".pub"}') | pbcopy)
+}
+
+# Test SSH public key authentication
+function ssh-keytest {
+  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o PreferredAuthentications=publickey -q "$1" exit && \
+      echo 'Connected' || \
+      echo 'Failed'
+}
+
+# Force SSH to use password authentication
+function ssh-password {
+  ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no $@
 }
