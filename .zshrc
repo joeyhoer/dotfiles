@@ -25,7 +25,7 @@ antigen apply
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
-for file in ~/.{path,zsh_prompt,exports,exports_secure,aliases,functions,extra}; do
+for file in ~/.{path,zsh_prompt,exports,exports_private,aliases,functions,extra}; do
   [ -r "$file" ] && [ -f "$file" ] && source "$file"
 done
 unset file
